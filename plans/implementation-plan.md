@@ -377,7 +377,7 @@ Pillow>=10.0.0        # Image processing
 ### Phase 3: Application Core
 10. Implement main QRCodeApp orchestration
 11. Add error handling and validation
-12. Create example files (sample SVG, CSV)
+
 
 ### Phase 4: GUI Development
 13. Create main Tkinter window
@@ -391,7 +391,7 @@ Pillow>=10.0.0        # Image processing
 19. Create integration tests
 20. Write user documentation
 21. Add inline code documentation
-22. Create example usage scenarios
+
 
 ## Testing Strategy
 
