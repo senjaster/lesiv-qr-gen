@@ -62,7 +62,7 @@ class TestIntegration:
         assert start_id > 0
         
         # Generate QR codes
-        qr_generator = QRGenerator()
+        qr_generator = QRGenerator(base_url=ConfigManager.DEFAULT_QR_BASE_URL)
         qr_ids = id_manager.generate_ids(len(positions))
         qr_images = {}
         for idx, (qr_id, pos) in enumerate(zip(qr_ids, positions)):
@@ -96,7 +96,7 @@ class TestIntegration:
         
         # Initialize components
         id_manager = IDManager(output_dir)
-        qr_generator = QRGenerator()
+        qr_generator = QRGenerator(base_url=ConfigManager.DEFAULT_QR_BASE_URL)
         pdf_generator = PDFGenerator(pdf_processor)
         
         created_files = []
@@ -133,7 +133,7 @@ class TestIntegration:
         """Test that IDs continue correctly across multiple runs."""
         positions = CSVParser.parse(sample_csv)
         pdf_processor = PDFProcessor(sample_pdf)
-        qr_generator = QRGenerator()
+        qr_generator = QRGenerator(base_url=ConfigManager.DEFAULT_QR_BASE_URL)
         pdf_generator = PDFGenerator(pdf_processor)
         
         # First run - create 2 pages
@@ -199,7 +199,7 @@ class TestIntegration:
         positions = CSVParser.parse(str(csv_file))
         pdf_processor = PDFProcessor(sample_pdf)
         id_manager = IDManager(output_dir)
-        qr_generator = QRGenerator()
+        qr_generator = QRGenerator(base_url=ConfigManager.DEFAULT_QR_BASE_URL)
         pdf_generator = PDFGenerator(pdf_processor)
         
         # Generate page

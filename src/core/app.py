@@ -44,7 +44,8 @@ class QRCodeApp:
             config_manager: Optional ConfigManager instance. If None, creates default.
         """
         self.config_manager = config_manager or ConfigManager()
-        self.qr_generator = QRGenerator(error_correction="M")
+        qr_base_url = self.config_manager.get("qr_base_url") or ConfigManager.DEFAULT_QR_BASE_URL
+        self.qr_generator = QRGenerator(error_correction="M", base_url=qr_base_url)
         logger.info("QRCodeApp initialized")
     
     def validate_inputs(

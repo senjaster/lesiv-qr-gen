@@ -24,8 +24,8 @@ class TestConfigManager:
         
         assert Path(temp_config_file).exists()
         # Check that default values are set in the config
-        assert config.get("page_width_mm") == "210.0"
         assert config.get("num_pages") == "10"
+        assert config.get("qr_base_url") == ConfigManager.DEFAULT_QR_BASE_URL
     
     def test_get_with_default(self, temp_config_file):
         """Test getting a value with a default."""
@@ -103,8 +103,8 @@ class TestConfigManager:
         assert config.get_path("last_output_folder") == ""
         
         # Check default settings
-        assert config.get_float("page_width_mm") == 210.0
         assert config.get_int("num_pages") == 10
+        assert config.get("qr_base_url") == ConfigManager.DEFAULT_QR_BASE_URL
     
     def test_thread_safety(self, temp_config_file):
         """Test that operations are thread-safe."""

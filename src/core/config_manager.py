@@ -13,6 +13,9 @@ class ConfigManager:
     across application restarts.
     """
     
+    # Default QR base URL - single source of truth
+    DEFAULT_QR_BASE_URL = "https://qr.thermoelectrica.ru?id="
+    
     DEFAULT_CONFIG = {
         "paths": {
             "last_svg_path": "",
@@ -20,8 +23,8 @@ class ConfigManager:
             "last_output_folder": "",
         },
         "settings": {
-            "page_width_mm": "210.0",
             "num_pages": "10",
+            "qr_base_url": DEFAULT_QR_BASE_URL,
         }
     }
     

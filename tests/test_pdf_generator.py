@@ -7,6 +7,7 @@ from src.core.pdf_generator import PDFGenerator
 from src.core.pdf_processor import PDFProcessor
 from src.core.csv_parser import QRPosition
 from src.core.qr_generator import QRGenerator
+from src.core.config_manager import ConfigManager
 
 
 class TestPDFGenerator:
@@ -32,7 +33,7 @@ class TestPDFGenerator:
     @pytest.fixture
     def qr_generator(self):
         """Create QR generator."""
-        return QRGenerator()
+        return QRGenerator(base_url=ConfigManager.DEFAULT_QR_BASE_URL)
     
     @pytest.fixture
     def sample_qr_positions(self):

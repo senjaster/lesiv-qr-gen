@@ -3,6 +3,7 @@
 import pytest
 from PIL import Image
 from src.core.qr_generator import QRGenerator
+from src.core.config_manager import ConfigManager
 
 
 class TestQRGenerator:
@@ -10,32 +11,46 @@ class TestQRGenerator:
     
     def test_init_default(self):
         """Test initialization with default error correction."""
-        gen = QRGenerator()
+        gen = QRGenerator(base_url=ConfigManager.DEFAULT_QR_BASE_URL)
         assert gen.error_correction is not None
+    
+    def test_init_requires_base_url(self):
+        """Test that base_url is required."""
+        with pytest.raises(ValueError, match="base_url must be provided"):
+            QRGenerator()
     
     def test_init_custom_error_correction(self):
         """Test initialization with custom error correction levels."""
         for level in ["L", "M", "Q", "H"]:
-            gen = QRGenerator(error_correction=level)
+            gen = QRGenerator(error_correction=level, base_url=ConfigManager.DEFAULT_QR_BASE_URL)
             assert gen.error_correction is not None
     
     def test_init_invalid_error_correction(self):
         """Test initialization with invalid error correction."""
         with pytest.raises(ValueError, match="Invalid error correction level"):
-            QRGenerator(error_correction="X")
+            QRGenerator(error_correction="X", base_url=ConfigManager.DEFAULT_QR_BASE_URL)
     
     def test_generate_url(self):
         """Test URL generation."""
-        gen = QRGenerator()
+        gen = QRGenerator(base_url=ConfigManager.DEFAULT_QR_BASE_URL)
         url = gen.generate_url(12345)
-        assert url == "https://qr.thermoelectrica.ru?id=12345"
+        assert url == f"{ConfigManager.DEFAULT_QR_BASE_URL}12345"
         
         url = gen.generate_url(1)
-        assert url == "https://qr.thermoelectrica.ru?id=1"
+        assert url == f"{ConfigManager.DEFAULT_QR_BASE_URL}1"
+    
+    def test_generate_url_custom_base(self):
+        """Test URL generation with custom base URL."""
+        gen = QRGenerator(base_url="https://example.com/qr?code=")
+        url = gen.generate_url(12345)
+        assert url == "https://example.com/qr?code=12345"
+        
+        url = gen.generate_url(999)
+        assert url == "https://example.com/qr?code=999"
     
     def test_generate_qr_code(self):
         """Test QR code generation."""
-        gen = QRGenerator()
+        gen = QRGenerator(base_url=ConfigManager.DEFAULT_QR_BASE_URL)
         img = gen.generate(12345, size_mm=20.0, dpi=300)
         
         # Check it's a PIL Image
@@ -47,7 +62,7 @@ class TestQRGenerator:
     
     def test_generate_different_sizes(self):
         """Test QR code generation with different sizes."""
-        gen = QRGenerator()
+        gen = QRGenerator(base_url=ConfigManager.DEFAULT_QR_BASE_URL)
         
         # Test 10mm
         img1 = gen.generate(1, size_mm=10.0, dpi=300)
@@ -64,7 +79,7 @@ class TestQRGenerator:
     
     def test_generate_different_dpi(self):
         """Test QR code generation with different DPI."""
-        gen = QRGenerator()
+        gen = QRGenerator(base_url=ConfigManager.DEFAULT_QR_BASE_URL)
         
         # Test 150 DPI
         img1 = gen.generate(1, size_mm=20.0, dpi=150)
@@ -81,7 +96,7 @@ class TestQRGenerator:
     
     def test_generate_batch(self):
         """Test batch QR code generation."""
-        gen = QRGenerator()
+        gen = QRGenerator(base_url=ConfigManager.DEFAULT_QR_BASE_URL)
         qr_ids = [1, 2, 3, 4, 5]
         
         images = gen.generate_batch(qr_ids, size_mm=20.0, dpi=300)
@@ -94,7 +109,7 @@ class TestQRGenerator:
     
     def test_generate_unique_codes(self):
         """Test that different IDs generate different QR codes."""
-        gen = QRGenerator()
+        gen = QRGenerator(base_url=ConfigManager.DEFAULT_QR_BASE_URL)
         
         img1 = gen.generate(1, size_mm=20.0, dpi=300)
         img2 = gen.generate(2, size_mm=20.0, dpi=300)

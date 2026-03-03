@@ -13,13 +13,12 @@ from typing import Optional
 class QRGenerator:
     """Generate QR codes with unique URLs."""
     
-    BASE_URL = "https://qr.thermoelectrica.ru?id="
-    
-    def __init__(self, error_correction: str = "M"):
+    def __init__(self, error_correction: str = "M", base_url: Optional[str] = None):
         """Initialize QR generator.
         
         Args:
             error_correction: Error correction level (L, M, Q, H). Default is M (15%).
+            base_url: Base URL for QR codes. Must be provided.
         """
         self.error_correction_map = {
             "L": qrcode.constants.ERROR_CORRECT_L,  # 7%
@@ -32,6 +31,11 @@ class QRGenerator:
             raise ValueError(f"Invalid error correction level: {error_correction}")
         
         self.error_correction = self.error_correction_map[error_correction]
+        
+        if base_url is None:
+            raise ValueError("base_url must be provided")
+        
+        self.base_url = base_url
     
     def generate_url(self, qr_id: int) -> str:
         """Generate URL for QR code.
@@ -42,7 +46,7 @@ class QRGenerator:
         Returns:
             Complete URL string
         """
-        return f"{self.BASE_URL}{qr_id}"
+        return f"{self.base_url}{qr_id}"
     
     def generate(self, qr_id: int, size_mm: float, dpi: int = 300) -> Image.Image:
         """Generate QR code image.
