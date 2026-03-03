@@ -4,6 +4,7 @@ import pytest
 import tempfile
 import time
 from pathlib import Path
+from datetime import datetime
 from src.core.id_manager import IDManager
 
 
@@ -34,9 +35,11 @@ class TestIDManager:
         
         # First page should be 1
         assert page_num == 1
-        # Start ID should be close to current epoch time
-        current_time = int(time.time())
-        assert abs(start_id - current_time) < 5  # Within 5 seconds
+        # Start ID should be the beginning of today (00:00:00)
+        now = datetime.now()
+        day_start = datetime(now.year, now.month, now.day, 0, 0, 0)
+        expected_start = int(day_start.timestamp())
+        assert start_id == expected_start
     
     def test_get_next_page_info_with_existing_files(self, temp_output_dir):
         """Test getting page info when files already exist."""
@@ -139,9 +142,11 @@ class TestIDManager:
         
         # Should start from 1 since no valid files exist
         assert page_num == 1
-        # Should use epoch timestamp
-        current_time = int(time.time())
-        assert abs(start_id - current_time) < 5
+        # Should use start of day epoch timestamp
+        now = datetime.now()
+        day_start = datetime(now.year, now.month, now.day, 0, 0, 0)
+        expected_start = int(day_start.timestamp())
+        assert start_id == expected_start
     
     def test_multiple_calls_same_day(self, temp_output_dir):
         """Test that multiple calls on the same day work correctly."""
@@ -171,3 +176,113 @@ class TestIDManager:
         # Check that all IDs are sequential
         assert len(all_ids) == 50
         assert all_ids == list(range(start_id, start_id + 50))
+    
+    def test_overflow_validation(self, temp_output_dir):
+        """Test that ID generation validates overflow to next day."""
+        manager = IDManager(temp_output_dir)
+        output_path = manager.get_output_path()
+        
+        # Get day boundaries
+        now = datetime.now()
+        day_start = datetime(now.year, now.month, now.day, 0, 0, 0)
+        day_start_epoch = int(day_start.timestamp())
+        day_end_epoch = day_start_epoch + manager.SECONDS_PER_DAY - 1
+        
+        # Create a file with IDs very close to end of day
+        # Leave only 10 IDs available for today
+        last_valid_id = day_end_epoch - 10
+        (output_path / f"001-{day_start_epoch}-{last_valid_id}.pdf").touch()
+        
+        page_num, start_id = manager.get_next_page_info()
+        
+        # Should be able to generate 10 IDs (up to day_end_epoch)
+        ids = manager.generate_ids(10)
+        assert len(ids) == 10
+        assert ids[-1] == day_end_epoch
+        
+        # Trying to generate even 1 more ID should raise ValueError
+        with pytest.raises(ValueError, match="overflow to the next day"):
+            manager.generate_ids(1)
+    
+    def test_overflow_validation_message(self, temp_output_dir):
+        """Test that overflow error message contains useful information."""
+        manager = IDManager(temp_output_dir)
+        output_path = manager.get_output_path()
+        
+        # Get day boundaries
+        now = datetime.now()
+        day_start = datetime(now.year, now.month, now.day, 0, 0, 0)
+        day_start_epoch = int(day_start.timestamp())
+        day_end_epoch = day_start_epoch + manager.SECONDS_PER_DAY - 1
+        
+        # Create a file with IDs very close to end of day (5 IDs left)
+        last_valid_id = day_end_epoch - 5
+        (output_path / f"001-{day_start_epoch}-{last_valid_id}.pdf").touch()
+        
+        page_num, start_id = manager.get_next_page_info()
+        
+        # Try to generate more IDs than available
+        with pytest.raises(ValueError) as exc_info:
+            manager.generate_ids(10)
+        
+        error_msg = str(exc_info.value)
+        assert "overflow to the next day" in error_msg
+        assert "5 IDs available" in error_msg
+        assert str(day_end_epoch) in error_msg
+    
+    def test_previous_day_ids_validation(self, temp_output_dir):
+        """Test that IDs from previous day are detected."""
+        manager = IDManager(temp_output_dir)
+        output_path = manager.get_output_path()
+        
+        # Get day boundaries
+        now = datetime.now()
+        day_start = datetime(now.year, now.month, now.day, 0, 0, 0)
+        day_start_epoch = int(day_start.timestamp())
+        
+        # Create a file with IDs from "yesterday" (before today's start)
+        yesterday_id = day_start_epoch - 1000
+        (output_path / f"001-{yesterday_id}-{yesterday_id + 99}.pdf").touch()
+        
+        page_num, start_id = manager.get_next_page_info()
+        
+        # Trying to generate IDs should raise ValueError about previous day
+        with pytest.raises(ValueError, match="before today's start epoch"):
+            manager.generate_ids(1)
+    
+    def test_day_start_epoch_calculation(self, temp_output_dir):
+        """Test that day start epoch is correctly calculated."""
+        manager = IDManager(temp_output_dir)
+        
+        # Get current day start
+        now = datetime.now()
+        day_start = datetime(now.year, now.month, now.day, 0, 0, 0)
+        expected_epoch = int(day_start.timestamp())
+        
+        actual_epoch = manager._get_day_start_epoch()
+        assert actual_epoch == expected_epoch
+        
+        # Test with specific date
+        specific_date = datetime(2026, 1, 15, 14, 30, 45)
+        specific_day_start = datetime(2026, 1, 15, 0, 0, 0)
+        expected_specific = int(specific_day_start.timestamp())
+        
+        actual_specific = manager._get_day_start_epoch(specific_date)
+        assert actual_specific == expected_specific
+    
+    def test_day_end_epoch_calculation(self, temp_output_dir):
+        """Test that day end epoch is correctly calculated."""
+        manager = IDManager(temp_output_dir)
+        
+        # Get current day end
+        now = datetime.now()
+        day_start = datetime(now.year, now.month, now.day, 0, 0, 0)
+        expected_end = int(day_start.timestamp()) + manager.SECONDS_PER_DAY - 1
+        
+        actual_end = manager._get_day_end_epoch()
+        assert actual_end == expected_end
+        
+        # Verify it's exactly 86399 seconds after day start
+        day_start_epoch = manager._get_day_start_epoch()
+        day_end_epoch = manager._get_day_end_epoch()
+        assert day_end_epoch - day_start_epoch == manager.SECONDS_PER_DAY - 1
