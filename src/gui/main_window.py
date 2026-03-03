@@ -353,9 +353,6 @@ class MainWindow:
         """
         self._log_status("="*50)
         self._log_status(f"✓ Успешно создано {len(generated_files)} PDF файл(ов)")
-        self._log_status("\nСозданные файлы:")
-        for file_path in generated_files:
-            self._log_status(f"  • {file_path}")
         self._log_status("="*50)
         
         messagebox.showinfo(
