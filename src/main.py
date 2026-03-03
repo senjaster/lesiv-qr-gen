@@ -7,7 +7,14 @@ import sys
 import logging
 from pathlib import Path
 
-from .gui.main_window import MainWindow
+# Handle both direct execution and package execution
+if __name__ == "__main__" and __package__ is None:
+    # Direct execution - add parent directory to path
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from src.gui.main_window import MainWindow
+else:
+    # Package execution (pipx, pip install, etc.)
+    from .gui.main_window import MainWindow
 
 
 def setup_logging():

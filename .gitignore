@@ -43,6 +43,11 @@ config.ini
 output/
 *.pdf
 
+# PyInstaller
+*.spec.bak
+*.manifest
+*.spec~
+
 # OS
 .DS_Store
 Thumbs.db

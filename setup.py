@@ -7,7 +7,8 @@ setup(
     author="QR-Gen Team",
     packages=find_packages(),
     install_requires=[
-        "fpdf2>=2.7.0",
+        "pypdf>=3.0.0",
+        "reportlab>=4.0.0",
         "qrcode[pil]>=7.4.0",
         "Pillow>=10.0.0",
     ],
@@ -15,6 +16,9 @@ setup(
     entry_points={
         "console_scripts": [
             "qr-gen=src.main:main",
+        ],
+        "gui_scripts": [
+            "qr-gen-gui=src.main:main",
         ],
     },
 )
