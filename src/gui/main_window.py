@@ -31,10 +31,9 @@ class MainWindow:
         self.app = QRCodeApp(self.config_manager)
         
         # Variables for form inputs
-        self.svg_path_var = tk.StringVar()
+        self.template_path_var = tk.StringVar()
         self.csv_path_var = tk.StringVar()
         self.output_path_var = tk.StringVar()
-        self.page_width_var = tk.StringVar(value="210.0")
         self.num_pages_var = tk.StringVar(value="10")
         
         # Load saved configuration
@@ -48,24 +47,21 @@ class MainWindow:
         
     def _load_config(self):
         """Load configuration from file."""
-        svg_path = self.config_manager.get("svg_path", "")
+        pdf_path = self.config_manager.get("pdf_path", "")
         csv_path = self.config_manager.get("csv_path", "")
-        output_path = self.config_manager.get("output_path", "")
-        page_width = self.config_manager.get("page_width", "210.0")
+        output_path = self.config_manager.get("output_folder", "")
         num_pages = self.config_manager.get("num_pages", "10")
         
-        self.svg_path_var.set(svg_path)
+        self.template_path_var.set(pdf_path)
         self.csv_path_var.set(csv_path)
         self.output_path_var.set(output_path)
-        self.page_width_var.set(str(page_width))
         self.num_pages_var.set(str(num_pages))
         
     def _save_config(self):
         """Save current configuration to file."""
-        self.config_manager.set("svg_path", self.svg_path_var.get())
+        self.config_manager.set("pdf_path", self.template_path_var.get())
         self.config_manager.set("csv_path", self.csv_path_var.get())
-        self.config_manager.set("output_path", self.output_path_var.get())
-        self.config_manager.set("page_width", self.page_width_var.get())
+        self.config_manager.set("output_folder", self.output_path_var.get())
         self.config_manager.set("num_pages", self.num_pages_var.get())
         self.config_manager.save()
         
@@ -94,14 +90,14 @@ class MainWindow:
         )
         title_label.grid(row=0, column=0, columnspan=3, pady=(0, 15))
         
-        # SVG File selection
+        # Template File selection (PDF only)
         row = 1
-        tk.Label(main_frame, text="SVG File:", bg=bg_color, fg="black").grid(
+        tk.Label(main_frame, text="PDF Template File:", bg=bg_color, fg="black").grid(
             row=row, column=0, sticky=tk.W, pady=5, padx=(0, 5)
         )
-        svg_entry = tk.Entry(main_frame, textvariable=self.svg_path_var, width=50)
-        svg_entry.grid(row=row, column=1, sticky="ew", pady=5, padx=5)
-        tk.Button(main_frame, text="Browse", command=self._browse_svg).grid(
+        template_entry = tk.Entry(main_frame, textvariable=self.template_path_var, width=50)
+        template_entry.grid(row=row, column=1, sticky="ew", pady=5, padx=5)
+        tk.Button(main_frame, text="Browse", command=self._browse_template).grid(
             row=row, column=2, pady=5, padx=5
         )
         
@@ -127,14 +123,6 @@ class MainWindow:
             row=row, column=2, pady=5, padx=5
         )
         
-        # Page Width input
-        row += 1
-        tk.Label(main_frame, text="Page Width (mm):", bg=bg_color, fg="black").grid(
-            row=row, column=0, sticky=tk.W, pady=5, padx=(0, 5)
-        )
-        width_entry = tk.Entry(main_frame, textvariable=self.page_width_var, width=20)
-        width_entry.grid(row=row, column=1, sticky=tk.W, pady=5, padx=5)
-        
         # Number of Pages input
         row += 1
         tk.Label(main_frame, text="Number of Pages:", bg=bg_color, fg="black").grid(
@@ -149,8 +137,6 @@ class MainWindow:
             main_frame,
             text="Generate PDFs",
             command=self._generate_pdfs,
-            bg="#4CAF50",
-            fg="white",
             font=("TkDefaultFont", 12, "bold"),
             padx=20,
             pady=10
@@ -200,16 +186,19 @@ class MainWindow:
         # Initial status message
         self._log_status("Ready to generate PDFs...")
         
-    def _browse_svg(self):
-        """Open file dialog to select SVG file."""
+    def _browse_template(self):
+        """Open file dialog to select PDF template file."""
         filename = filedialog.askopenfilename(
-            title="Select SVG File",
-            filetypes=[("SVG files", "*.svg"), ("All files", "*.*")],
-            initialdir=self._get_initial_dir(self.svg_path_var.get())
+            title="Select PDF Template File",
+            filetypes=[
+                ("PDF files", "*.pdf"),
+                ("All files", "*.*")
+            ],
+            initialdir=self._get_initial_dir(self.template_path_var.get())
         )
         if filename:
-            self.svg_path_var.set(filename)
-            self._log_status(f"Selected SVG: {Path(filename).name}")
+            self.template_path_var.set(filename)
+            self._log_status(f"Selected PDF template: {Path(filename).name}")
             
     def _browse_csv(self):
         """Open file dialog to select CSV file."""
@@ -265,13 +254,16 @@ class MainWindow:
         Returns:
             True if all inputs are valid, False otherwise
         """
-        # Check SVG file
-        svg_path = self.svg_path_var.get()
-        if not svg_path:
-            messagebox.showerror("Validation Error", "Please select an SVG file.")
+        # Check template file
+        template_path = self.template_path_var.get()
+        if not template_path:
+            messagebox.showerror("Validation Error", "Please select a PDF template file.")
             return False
-        if not Path(svg_path).exists():
-            messagebox.showerror("Validation Error", f"SVG file not found: {svg_path}")
+        if not Path(template_path).exists():
+            messagebox.showerror("Validation Error", f"PDF template file not found: {template_path}")
+            return False
+        if Path(template_path).suffix.lower() != '.pdf':
+            messagebox.showerror("Validation Error", f"Template must be a PDF file: {template_path}")
             return False
             
         # Check CSV file
@@ -287,15 +279,6 @@ class MainWindow:
         output_path = self.output_path_var.get()
         if not output_path:
             messagebox.showerror("Validation Error", "Please select an output folder.")
-            return False
-            
-        # Check page width
-        try:
-            page_width = float(self.page_width_var.get())
-            if page_width <= 0:
-                raise ValueError("Page width must be positive")
-        except ValueError as e:
-            messagebox.showerror("Validation Error", f"Invalid page width: {e}")
             return False
             
         # Check number of pages
@@ -349,17 +332,15 @@ class MainWindow:
     def _run_generation(self):
         """Run PDF generation (called in separate thread)."""
         try:
-            svg_path = self.svg_path_var.get()
+            pdf_path = self.template_path_var.get()
             csv_path = self.csv_path_var.get()
             output_path = self.output_path_var.get()
-            page_width = float(self.page_width_var.get())
             num_pages = int(self.num_pages_var.get())
             
             # Generate pages
             generated_files = self.app.generate_pages(
-                svg_path=svg_path,
+                pdf_path=pdf_path,
                 csv_path=csv_path,
-                page_width_mm=page_width,
                 num_pages=num_pages,
                 output_root=output_path,
                 progress_callback=self._progress_callback
@@ -369,8 +350,9 @@ class MainWindow:
             self.root.after(0, lambda: self._generation_complete(generated_files))
             
         except Exception as e:
-            # Error message
-            self.root.after(0, lambda: self._generation_error(str(e)))
+            # Error message - capture error string immediately
+            error_msg = str(e)
+            self.root.after(0, lambda: self._generation_error(error_msg))
             
     def _generation_complete(self, generated_files: list[str]):
         """Handle successful generation completion.

@@ -11,15 +11,11 @@ from .config_manager import ConfigManager
 from .id_manager import IDManager
 from .csv_parser import CSVParser, QRPosition
 from .qr_generator import QRGenerator
-from .svg_processor import SVGProcessor
+from .pdf_processor import PDFProcessor
 from .pdf_generator import PDFGenerator
 
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Get logger (configured in main.py)
 logger = logging.getLogger(__name__)
 
 
@@ -53,32 +49,30 @@ class QRCodeApp:
     
     def validate_inputs(
         self,
-        svg_path: str,
+        pdf_path: str,
         csv_path: str,
-        page_width_mm: float,
         num_pages: int,
         output_root: str
     ) -> None:
         """Validate all input parameters.
         
         Args:
-            svg_path: Path to SVG file
+            pdf_path: Path to PDF template file
             csv_path: Path to CSV file with QR positions
-            page_width_mm: Target page width in millimeters
             num_pages: Number of pages to generate
             output_root: Root output directory
             
         Raises:
             ValidationError: If any validation fails
         """
-        # Validate SVG file
-        svg_file = Path(svg_path)
-        if not svg_file.exists():
-            raise ValidationError(f"SVG file not found: {svg_path}")
-        if not svg_file.is_file():
-            raise ValidationError(f"SVG path is not a file: {svg_path}")
-        if svg_file.suffix.lower() != '.svg':
-            raise ValidationError(f"File is not an SVG: {svg_path}")
+        # Validate PDF file
+        pdf_file = Path(pdf_path)
+        if not pdf_file.exists():
+            raise ValidationError(f"PDF file not found: {pdf_path}")
+        if not pdf_file.is_file():
+            raise ValidationError(f"PDF path is not a file: {pdf_path}")
+        if pdf_file.suffix.lower() != '.pdf':
+            raise ValidationError(f"File must be a PDF: {pdf_path}")
         
         # Validate CSV file
         csv_file = Path(csv_path)
@@ -88,12 +82,6 @@ class QRCodeApp:
             raise ValidationError(f"CSV path is not a file: {csv_path}")
         if csv_file.suffix.lower() != '.csv':
             raise ValidationError(f"File is not a CSV: {csv_path}")
-        
-        # Validate page width
-        if page_width_mm <= 0:
-            raise ValidationError(f"Page width must be positive: {page_width_mm}")
-        if page_width_mm > 1000:  # Sanity check
-            raise ValidationError(f"Page width too large (max 1000mm): {page_width_mm}")
         
         # Validate number of pages
         if num_pages <= 0:
@@ -120,9 +108,8 @@ class QRCodeApp:
     
     def generate_pages(
         self,
-        svg_path: str,
+        pdf_path: str,
         csv_path: str,
-        page_width_mm: float,
         num_pages: int,
         output_root: str,
         progress_callback: Optional[Callable[[int, int, str], None]] = None
@@ -130,9 +117,8 @@ class QRCodeApp:
         """Generate PDF pages with QR codes.
         
         Args:
-            svg_path: Path to SVG file
+            pdf_path: Path to PDF template file
             csv_path: Path to CSV file with QR positions
-            page_width_mm: Target page width in millimeters
             num_pages: Number of pages to generate
             output_root: Root output directory
             progress_callback: Optional callback function(current, total, message)
@@ -147,7 +133,7 @@ class QRCodeApp:
         try:
             # Validate inputs
             logger.info("Validating inputs...")
-            self.validate_inputs(svg_path, csv_path, page_width_mm, num_pages, output_root)
+            self.validate_inputs(pdf_path, csv_path, num_pages, output_root)
             
             if progress_callback:
                 progress_callback(0, num_pages, "Validation complete")
@@ -167,14 +153,14 @@ class QRCodeApp:
             if progress_callback:
                 progress_callback(0, num_pages, f"Loaded {len(qr_positions)} QR positions")
             
-            # Process SVG
-            logger.info(f"Processing SVG file: {svg_path}")
+            # Process PDF template
+            logger.info(f"Processing PDF template: {pdf_path}")
             try:
-                svg_processor = SVGProcessor(svg_path, page_width_mm)
+                pdf_processor = PDFProcessor(pdf_path)
             except Exception as e:
-                raise ValidationError(f"Failed to process SVG: {e}")
+                raise ValidationError(f"Failed to process PDF: {e}")
             
-            page_width, page_height = svg_processor.get_page_dimensions()
+            page_width, page_height = pdf_processor.get_page_dimensions_mm()
             logger.info(f"Page dimensions: {page_width:.2f}mm x {page_height:.2f}mm")
             
             # Validate QR positions are within page bounds
@@ -182,14 +168,14 @@ class QRCodeApp:
                 raise ValidationError("Some QR positions are outside page bounds")
             
             if progress_callback:
-                progress_callback(0, num_pages, "SVG processed successfully")
+                progress_callback(0, num_pages, "PDF template processed successfully")
             
             # Initialize ID manager
             logger.info(f"Initializing ID manager for output: {output_root}")
             id_manager = IDManager(output_root)
             
             # Initialize PDF generator
-            pdf_generator = PDFGenerator(svg_processor)
+            pdf_generator = PDFGenerator(pdf_processor)
             
             # Generate pages
             generated_files = []
@@ -233,10 +219,9 @@ class QRCodeApp:
                     raise GenerationError(error_msg)
             
             # Save configuration
-            self.config_manager.set("svg_path", svg_path)
+            self.config_manager.set("pdf_path", pdf_path)
             self.config_manager.set("csv_path", csv_path)
             self.config_manager.set("output_folder", output_root)
-            self.config_manager.set("page_width_mm", page_width_mm)
             self.config_manager.set("num_pages", num_pages)
             self.config_manager.save()
             
@@ -262,10 +247,16 @@ class QRCodeApp:
         Returns:
             Dictionary with configuration values
         """
+        # Support backward compatibility with old config keys
+        pdf_path = self.config_manager.get("pdf_path", "")
+        if not pdf_path:
+            pdf_path = self.config_manager.get("template_path", "")
+        if not pdf_path:
+            pdf_path = self.config_manager.get("svg_path", "")
+        
         return {
-            "svg_path": self.config_manager.get("svg_path", ""),
+            "pdf_path": pdf_path,
             "csv_path": self.config_manager.get("csv_path", ""),
             "output_folder": self.config_manager.get("output_folder", ""),
-            "page_width_mm": self.config_manager.get("page_width_mm", 210.0),
             "num_pages": self.config_manager.get("num_pages", 1),
         }
