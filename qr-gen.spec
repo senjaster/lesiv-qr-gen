@@ -6,9 +6,7 @@ a = Analysis(
     ['src/main.py'],
     pathex=[],
     binaries=[],
-    datas=[
-        ('examples', 'examples'),
-    ],
+    datas=[],
     hiddenimports=[
         'tkinter',
         'tkinter.filedialog',
