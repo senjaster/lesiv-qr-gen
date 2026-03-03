@@ -22,7 +22,7 @@ class MainWindow:
             root: Tkinter root window
         """
         self.root = root
-        self.root.title("QR Code Embedding Application")
+        self.root.title("Приложение для встраивания QR-кодов")
         self.root.geometry("700x600")
         self.root.resizable(True, True)
         
@@ -80,52 +80,43 @@ class MainWindow:
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
         
-        # Title
-        title_label = tk.Label(
-            main_frame,
-            text="QR Code Embedding Application",
-            font=("TkDefaultFont", 14, "bold"),
-            bg=bg_color,
-            fg="black"
-        )
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 15))
-        
+
         # Template File selection (PDF only)
         row = 1
-        tk.Label(main_frame, text="PDF Template File:", bg=bg_color, fg="black").grid(
+        tk.Label(main_frame, text="Шаблон:", bg=bg_color, fg="black").grid(
             row=row, column=0, sticky=tk.W, pady=5, padx=(0, 5)
         )
         template_entry = tk.Entry(main_frame, textvariable=self.template_path_var, width=50)
         template_entry.grid(row=row, column=1, sticky="ew", pady=5, padx=5)
-        tk.Button(main_frame, text="Browse", command=self._browse_template).grid(
+        tk.Button(main_frame, text="Обзор", command=self._browse_template).grid(
             row=row, column=2, pady=5, padx=5
         )
         
         # CSV File selection
         row += 1
-        tk.Label(main_frame, text="CSV File:", bg=bg_color, fg="black").grid(
+        tk.Label(main_frame, text="Положение QR-кодов:", bg=bg_color, fg="black").grid(
             row=row, column=0, sticky=tk.W, pady=5, padx=(0, 5)
         )
         csv_entry = tk.Entry(main_frame, textvariable=self.csv_path_var, width=50)
         csv_entry.grid(row=row, column=1, sticky="ew", pady=5, padx=5)
-        tk.Button(main_frame, text="Browse", command=self._browse_csv).grid(
+        tk.Button(main_frame, text="Обзор", command=self._browse_csv).grid(
             row=row, column=2, pady=5, padx=5
         )
         
         # Output Folder selection
         row += 1
-        tk.Label(main_frame, text="Output Folder:", bg=bg_color, fg="black").grid(
+        tk.Label(main_frame, text="Готовые файлы:", bg=bg_color, fg="black").grid(
             row=row, column=0, sticky=tk.W, pady=5, padx=(0, 5)
         )
         output_entry = tk.Entry(main_frame, textvariable=self.output_path_var, width=50)
         output_entry.grid(row=row, column=1, sticky="ew", pady=5, padx=5)
-        tk.Button(main_frame, text="Browse", command=self._browse_output).grid(
+        tk.Button(main_frame, text="Обзор", command=self._browse_output).grid(
             row=row, column=2, pady=5, padx=5
         )
         
         # Number of Pages input
         row += 1
-        tk.Label(main_frame, text="Number of Pages:", bg=bg_color, fg="black").grid(
+        tk.Label(main_frame, text="Количество страниц:", bg=bg_color, fg="black").grid(
             row=row, column=0, sticky=tk.W, pady=5, padx=(0, 5)
         )
         pages_entry = tk.Entry(main_frame, textvariable=self.num_pages_var, width=20)
@@ -135,7 +126,7 @@ class MainWindow:
         row += 1
         self.generate_button = tk.Button(
             main_frame,
-            text="Generate PDFs",
+            text="Сгенерировать PDF",
             command=self._generate_pdfs,
             font=("TkDefaultFont", 12, "bold"),
             padx=20,
@@ -145,7 +136,7 @@ class MainWindow:
         
         # Progress bar
         row += 1
-        tk.Label(main_frame, text="Progress:", bg=bg_color, fg="black").grid(
+        tk.Label(main_frame, text="Прогресс:", bg=bg_color, fg="black").grid(
             row=row, column=0, sticky=tk.W, pady=5, padx=(0, 5)
         )
         self.progress_var = tk.DoubleVar()
@@ -159,7 +150,7 @@ class MainWindow:
         
         # Status log
         row += 1
-        tk.Label(main_frame, text="Status Log:", bg=bg_color, fg="black").grid(
+        tk.Label(main_frame, text="Сообщения:", bg=bg_color, fg="black").grid(
             row=row, column=0, sticky="nw", pady=5, padx=(0, 5)
         )
         
@@ -184,42 +175,42 @@ class MainWindow:
         main_frame.rowconfigure(row+1, weight=1)
         
         # Initial status message
-        self._log_status("Ready to generate PDFs...")
+        self._log_status("Готов к созданию PDF...")
         
     def _browse_template(self):
         """Open file dialog to select PDF template file."""
         filename = filedialog.askopenfilename(
-            title="Select PDF Template File",
+            title="Выберите файл шаблона PDF",
             filetypes=[
-                ("PDF files", "*.pdf"),
-                ("All files", "*.*")
+                ("Файлы PDF", "*.pdf"),
+                ("Все файлы", "*.*")
             ],
             initialdir=self._get_initial_dir(self.template_path_var.get())
         )
         if filename:
             self.template_path_var.set(filename)
-            self._log_status(f"Selected PDF template: {Path(filename).name}")
+            self._log_status(f"Выбран шаблон PDF: {Path(filename).name}")
             
     def _browse_csv(self):
         """Open file dialog to select CSV file."""
         filename = filedialog.askopenfilename(
-            title="Select CSV File",
-            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+            title="Выберите файл CSV",
+            filetypes=[("Файлы CSV", "*.csv"), ("Все файлы", "*.*")],
             initialdir=self._get_initial_dir(self.csv_path_var.get())
         )
         if filename:
             self.csv_path_var.set(filename)
-            self._log_status(f"Selected CSV: {Path(filename).name}")
+            self._log_status(f"Выбран CSV: {Path(filename).name}")
             
     def _browse_output(self):
         """Open directory dialog to select output folder."""
         dirname = filedialog.askdirectory(
-            title="Select Output Folder",
+            title="Выберите папку для сохранения результатов",
             initialdir=self._get_initial_dir(self.output_path_var.get())
         )
         if dirname:
             self.output_path_var.set(dirname)
-            self._log_status(f"Selected output folder: {Path(dirname).name}")
+            self._log_status(f"Выбрана папка для сохранения результатов: {Path(dirname).name}")
             
     def _get_initial_dir(self, path: str) -> str:
         """Get initial directory for file dialog.
@@ -257,37 +248,37 @@ class MainWindow:
         # Check template file
         template_path = self.template_path_var.get()
         if not template_path:
-            messagebox.showerror("Validation Error", "Please select a PDF template file.")
+            messagebox.showerror("Ошибка валидации", "Пожалуйста, выберите файл шаблона PDF.")
             return False
         if not Path(template_path).exists():
-            messagebox.showerror("Validation Error", f"PDF template file not found: {template_path}")
+            messagebox.showerror("Ошибка валидации", f"Файл шаблона PDF не найден: {template_path}")
             return False
         if Path(template_path).suffix.lower() != '.pdf':
-            messagebox.showerror("Validation Error", f"Template must be a PDF file: {template_path}")
+            messagebox.showerror("Ошибка валидации", f"Шаблон должен быть файлом PDF: {template_path}")
             return False
             
         # Check CSV file
         csv_path = self.csv_path_var.get()
         if not csv_path:
-            messagebox.showerror("Validation Error", "Please select a CSV file.")
+            messagebox.showerror("Ошибка валидации", "Пожалуйста, выберите файл CSV.")
             return False
         if not Path(csv_path).exists():
-            messagebox.showerror("Validation Error", f"CSV file not found: {csv_path}")
+            messagebox.showerror("Ошибка валидации", f"Файл CSV не найден: {csv_path}")
             return False
             
         # Check output folder
         output_path = self.output_path_var.get()
         if not output_path:
-            messagebox.showerror("Validation Error", "Please select an output folder.")
+            messagebox.showerror("Ошибка валидации", "Пожалуйста, выберите папку вывода.")
             return False
             
         # Check number of pages
         try:
             num_pages = int(self.num_pages_var.get())
             if num_pages <= 0:
-                raise ValueError("Number of pages must be positive")
+                raise ValueError("Количество страниц должно быть положительным")
         except ValueError as e:
-            messagebox.showerror("Validation Error", f"Invalid number of pages: {e}")
+            messagebox.showerror("Ошибка валидации", f"Неверное количество страниц: {e}")
             return False
             
         return True
@@ -323,7 +314,7 @@ class MainWindow:
         # Reset progress
         self.progress_var.set(0)
         self._log_status("\n" + "="*50)
-        self._log_status("Starting PDF generation...")
+        self._log_status("Начало создания PDF...")
         
         # Run generation in separate thread
         thread = threading.Thread(target=self._run_generation, daemon=True)
@@ -361,15 +352,15 @@ class MainWindow:
             generated_files: List of generated file paths
         """
         self._log_status("="*50)
-        self._log_status(f"✓ Successfully generated {len(generated_files)} PDF file(s)")
-        self._log_status("\nGenerated files:")
+        self._log_status(f"✓ Успешно создано {len(generated_files)} PDF файл(ов)")
+        self._log_status("\nСозданные файлы:")
         for file_path in generated_files:
             self._log_status(f"  • {file_path}")
         self._log_status("="*50)
         
         messagebox.showinfo(
-            "Success",
-            f"Successfully generated {len(generated_files)} PDF file(s)!"
+            "Успех",
+            f"Успешно создано {len(generated_files)} PDF файл(ов)!"
         )
         
         # Re-enable generate button
@@ -383,10 +374,10 @@ class MainWindow:
             error_message: Error message
         """
         self._log_status("="*50)
-        self._log_status(f"✗ Error: {error_message}")
+        self._log_status(f"✗ Ошибка: {error_message}")
         self._log_status("="*50)
         
-        messagebox.showerror("Generation Error", f"Failed to generate PDFs:\n\n{error_message}")
+        messagebox.showerror("Ошибка создания", f"Не удалось создать PDF:\n\n{error_message}")
         
         # Re-enable generate button
         self.generate_button.configure(state='normal')
