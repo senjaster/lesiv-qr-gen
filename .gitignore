@@ -41,7 +41,7 @@ htmlcov/
 # Application
 config.ini
 output/
-*.pdf
+examples/**/*.pdf
 
 # PyInstaller
 *.spec.bak
