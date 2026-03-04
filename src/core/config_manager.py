@@ -14,7 +14,7 @@ class ConfigManager:
     """
     
     # Default QR base URL - single source of truth
-    DEFAULT_QR_BASE_URL = "https://qr.thermoelectrica.ru?id="
+    DEFAULT_QR_BASE_URL = "https://qr.thermoelectrica.com?id="
     
     DEFAULT_CONFIG = {
         "paths": {

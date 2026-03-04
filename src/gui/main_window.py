@@ -35,6 +35,7 @@ class MainWindow:
         self.csv_path_var = tk.StringVar()
         self.output_path_var = tk.StringVar()
         self.num_pages_var = tk.StringVar(value="10")
+        self.qr_base_url_var = tk.StringVar()
         
         # Load saved configuration
         self._load_config()
@@ -51,11 +52,13 @@ class MainWindow:
         csv_path = self.config_manager.get("csv_path", "")
         output_path = self.config_manager.get("output_folder", "")
         num_pages = self.config_manager.get("num_pages", "10")
+        qr_base_url = self.config_manager.get("qr_base_url", ConfigManager.DEFAULT_QR_BASE_URL)
         
         self.template_path_var.set(pdf_path)
         self.csv_path_var.set(csv_path)
         self.output_path_var.set(output_path)
         self.num_pages_var.set(str(num_pages))
+        self.qr_base_url_var.set(qr_base_url)
         
     def _save_config(self):
         """Save current configuration to file."""
@@ -63,7 +66,11 @@ class MainWindow:
         self.config_manager.set("csv_path", self.csv_path_var.get())
         self.config_manager.set("output_folder", self.output_path_var.get())
         self.config_manager.set("num_pages", self.num_pages_var.get())
+        self.config_manager.set("qr_base_url", self.qr_base_url_var.get())
         self.config_manager.save()
+        
+        # Reinitialize app with new QR base URL
+        self.app = QRCodeApp(self.config_manager)
         
     def _create_widgets(self):
         """Create all UI widgets."""
@@ -121,6 +128,14 @@ class MainWindow:
         )
         pages_entry = tk.Entry(main_frame, textvariable=self.num_pages_var, width=20)
         pages_entry.grid(row=row, column=1, sticky=tk.W, pady=5, padx=5)
+        
+        # QR Base URL input
+        row += 1
+        tk.Label(main_frame, text="Базовый URL QR-кода:", bg=bg_color, fg="black").grid(
+            row=row, column=0, sticky=tk.W, pady=5, padx=(0, 5)
+        )
+        qr_url_entry = tk.Entry(main_frame, textvariable=self.qr_base_url_var, width=50)
+        qr_url_entry.grid(row=row, column=1, columnspan=2, sticky="ew", pady=5, padx=5)
         
         # Generate button
         row += 1
