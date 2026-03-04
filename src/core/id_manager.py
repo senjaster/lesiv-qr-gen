@@ -4,7 +4,10 @@ import re
 import time
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Tuple, Optional
+from typing import Tuple, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .config_manager import ConfigManager
 
 
 class IDManager:
@@ -21,13 +24,15 @@ class IDManager:
     # Seconds in a day for overflow validation
     SECONDS_PER_DAY = 86400
     
-    def __init__(self, output_root: str):
+    def __init__(self, output_root: str, config_manager: Optional['ConfigManager'] = None):
         """Initialize the ID manager.
         
         Args:
             output_root: Root directory for output files
+            config_manager: Optional ConfigManager for persisting state
         """
         self.output_root = Path(output_root)
+        self.config_manager = config_manager
         self._current_date = None
         self._next_page_num = None
         self._next_id = None
@@ -101,6 +106,9 @@ class IDManager:
     def _scan_existing_files(self, output_path: Path) -> None:
         """Scan existing PDF files to determine next page number and ID.
         
+        If no files exist in the folder, attempts to restore state from config
+        if the saved state is for the current day.
+        
         Args:
             output_path: Path to scan for existing PDF files
         """
@@ -125,11 +133,45 @@ class IDManager:
         self._next_page_num = max_page_num + 1
         
         if max_id is None:
-            # No existing files, use start of day epoch timestamp
-            self._next_id = self._get_day_start_epoch()
+            # No existing files - try to restore from config if available
+            restored = self._try_restore_from_config()
+            if not restored:
+                # No saved state or invalid - use start of day epoch timestamp
+                self._next_id = self._get_day_start_epoch()
         else:
             # Continue from last ID
             self._next_id = max_id + 1
+    
+    def _try_restore_from_config(self) -> bool:
+        """Try to restore state from config if it's valid for today.
+        
+        Returns:
+            True if state was restored, False otherwise
+        """
+        if self.config_manager is None:
+            return False
+        
+        saved_date, saved_id, saved_page_num = self.config_manager.get_id_state()
+        
+        if saved_date is None or saved_id is None or saved_page_num is None:
+            return False
+        
+        # Check if saved date matches today
+        today = datetime.now().strftime("%Y-%m-%d")
+        if saved_date != today:
+            return False
+        
+        # Validate that saved_id is within today's range
+        day_start = self._get_day_start_epoch()
+        day_end = self._get_day_end_epoch()
+        
+        if saved_id < day_start or saved_id > day_end:
+            return False
+        
+        # Restore state
+        self._next_id = saved_id + 1
+        self._next_page_num = saved_page_num + 1
+        return True
     
     def generate_ids(self, count: int) -> list[int]:
         """Generate a list of sequential IDs.
@@ -202,7 +244,7 @@ class IDManager:
         """Update internal state after generating a page.
         
         This is called after successfully generating a page to update
-        the next page number.
+        the next page number and save state to config.
         
         Args:
             page_num: Page number that was just generated
@@ -210,3 +252,8 @@ class IDManager:
         """
         self._next_page_num = page_num + 1
         # _next_id is already updated by generate_ids()
+        
+        # Save state to config if available
+        if self.config_manager is not None:
+            today = datetime.now().strftime("%Y-%m-%d")
+            self.config_manager.save_id_state(today, max_id, page_num)

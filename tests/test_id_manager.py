@@ -4,8 +4,9 @@ import pytest
 import tempfile
 import time
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.core.id_manager import IDManager
+from src.core.config_manager import ConfigManager
 
 
 class TestIDManager:
@@ -286,3 +287,155 @@ class TestIDManager:
         day_start_epoch = manager._get_day_start_epoch()
         day_end_epoch = manager._get_day_end_epoch()
         assert day_end_epoch - day_start_epoch == manager.SECONDS_PER_DAY - 1
+    
+    def test_state_persistence_with_config(self, temp_output_dir):
+        """Test that state is saved to config after generating pages."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.ini', delete=False) as config_file:
+            config_path = config_file.name
+        
+        try:
+            # Create manager with config
+            config_manager = ConfigManager(config_path)
+            manager = IDManager(temp_output_dir, config_manager)
+            
+            # Generate some pages
+            page_num, start_id = manager.get_next_page_info()
+            ids = manager.generate_ids(5)
+            manager.update_page_info(page_num, ids[-1])
+            
+            # Check that state was saved
+            saved_date, saved_id, saved_page_num = config_manager.get_id_state()
+            today = datetime.now().strftime("%Y-%m-%d")
+            
+            assert saved_date == today
+            assert saved_id == ids[-1]
+            assert saved_page_num == page_num
+        finally:
+            Path(config_path).unlink(missing_ok=True)
+    
+    def test_state_restoration_empty_folder(self, temp_output_dir):
+        """Test that state is restored from config when folder is empty."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.ini', delete=False) as config_file:
+            config_path = config_file.name
+        
+        try:
+            # Create manager and generate some pages
+            config_manager = ConfigManager(config_path)
+            manager1 = IDManager(temp_output_dir, config_manager)
+            
+            page_num1, start_id1 = manager1.get_next_page_info()
+            ids1 = manager1.generate_ids(10)
+            manager1.update_page_info(page_num1, ids1[-1])
+            
+            # Create output file to simulate real generation
+            output_path = manager1.get_output_path()
+            filename = manager1.format_filename(page_num1, ids1[0], ids1[-1])
+            (output_path / filename).touch()
+            
+            # Now delete the output folder to simulate clearing
+            import shutil
+            shutil.rmtree(output_path)
+            
+            # Create new manager with same config
+            manager2 = IDManager(temp_output_dir, config_manager)
+            page_num2, start_id2 = manager2.get_next_page_info()
+            
+            # Should restore from config
+            assert page_num2 == page_num1 + 1
+            assert start_id2 == ids1[-1] + 1
+        finally:
+            Path(config_path).unlink(missing_ok=True)
+    
+    def test_state_restoration_ignores_old_date(self, temp_output_dir):
+        """Test that state from previous day is ignored."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.ini', delete=False) as config_file:
+            config_path = config_file.name
+        
+        try:
+            config_manager = ConfigManager(config_path)
+            
+            # Save state for yesterday
+            yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+            config_manager.save_id_state(yesterday, 1234567, 5)
+            
+            # Create new manager
+            manager = IDManager(temp_output_dir, config_manager)
+            page_num, start_id = manager.get_next_page_info()
+            
+            # Should NOT restore from config (wrong date)
+            # Should start from beginning of today
+            assert page_num == 1
+            now = datetime.now()
+            day_start = datetime(now.year, now.month, now.day, 0, 0, 0)
+            expected_start = int(day_start.timestamp())
+            assert start_id == expected_start
+        finally:
+            Path(config_path).unlink(missing_ok=True)
+    
+    def test_state_restoration_validates_id_range(self, temp_output_dir):
+        """Test that saved ID is validated to be within today's range."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.ini', delete=False) as config_file:
+            config_path = config_file.name
+        
+        try:
+            config_manager = ConfigManager(config_path)
+            
+            # Save state for today but with invalid ID (from yesterday)
+            today = datetime.now().strftime("%Y-%m-%d")
+            now = datetime.now()
+            day_start = datetime(now.year, now.month, now.day, 0, 0, 0)
+            day_start_epoch = int(day_start.timestamp())
+            invalid_id = day_start_epoch - 1000  # ID from yesterday
+            
+            config_manager.save_id_state(today, invalid_id, 5)
+            
+            # Create new manager
+            manager = IDManager(temp_output_dir, config_manager)
+            page_num, start_id = manager.get_next_page_info()
+            
+            # Should NOT restore from config (invalid ID)
+            # Should start from beginning of today
+            assert page_num == 1
+            assert start_id == day_start_epoch
+        finally:
+            Path(config_path).unlink(missing_ok=True)
+    
+    def test_state_without_config_manager(self, temp_output_dir):
+        """Test that manager works without config manager (no persistence)."""
+        # Create manager without config
+        manager = IDManager(temp_output_dir)
+        
+        page_num, start_id = manager.get_next_page_info()
+        ids = manager.generate_ids(5)
+        
+        # Should work normally, just won't persist
+        manager.update_page_info(page_num, ids[-1])
+        
+        # No errors should occur
+        assert page_num == 1
+    
+    def test_state_restoration_prefers_files_over_config(self, temp_output_dir):
+        """Test that existing files take precedence over saved config state."""
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.ini', delete=False) as config_file:
+            config_path = config_file.name
+        
+        try:
+            config_manager = ConfigManager(config_path)
+            
+            # Save state in config
+            today = datetime.now().strftime("%Y-%m-%d")
+            config_manager.save_id_state(today, 5000, 10)
+            
+            # Create manager and add actual files
+            manager = IDManager(temp_output_dir, config_manager)
+            output_path = manager.get_output_path()
+            (output_path / "001-1000-1005.pdf").touch()
+            (output_path / "002-1006-1010.pdf").touch()
+            
+            page_num, start_id = manager.get_next_page_info()
+            
+            # Should use files, not config
+            assert page_num == 3
+            assert start_id == 1011
+        finally:
+            Path(config_path).unlink(missing_ok=True)

@@ -171,9 +171,9 @@ class QRCodeApp:
             if progress_callback:
                 progress_callback(0, num_pages, "PDF template processed successfully")
             
-            # Initialize ID manager
+            # Initialize ID manager with config manager for state persistence
             logger.info(f"Initializing ID manager for output: {output_root}")
-            id_manager = IDManager(output_root)
+            id_manager = IDManager(output_root, self.config_manager)
             
             # Initialize PDF generator
             pdf_generator = PDFGenerator(pdf_processor)

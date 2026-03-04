@@ -25,6 +25,11 @@ class ConfigManager:
         "settings": {
             "num_pages": "10",
             "qr_base_url": DEFAULT_QR_BASE_URL,
+        },
+        "id_state": {
+            "last_date": "",
+            "last_id": "",
+            "last_page_num": "",
         }
     }
     
@@ -150,3 +155,36 @@ class ConfigManager:
             return int(value)
         except (ValueError, TypeError):
             return default
+    
+    def save_id_state(self, date: str, last_id: int, last_page_num: int) -> None:
+        """Save the last generated ID state for a specific date.
+        
+        Args:
+            date: Date string in YYYY-MM-DD format
+            last_id: Last generated ID
+            last_page_num: Last generated page number
+        """
+        self.set("last_date", date, section="id_state")
+        self.set("last_id", str(last_id), section="id_state")
+        self.set("last_page_num", str(last_page_num), section="id_state")
+        self.save()
+    
+    def get_id_state(self) -> tuple[Optional[str], Optional[int], Optional[int]]:
+        """Get the last saved ID state.
+        
+        Returns:
+            Tuple of (date, last_id, last_page_num) or (None, None, None) if not set
+        """
+        date = self.get("last_date", "", section="id_state")
+        last_id_str = self.get("last_id", "", section="id_state")
+        last_page_num_str = self.get("last_page_num", "", section="id_state")
+        
+        if not date or not last_id_str or not last_page_num_str:
+            return None, None, None
+        
+        try:
+            last_id = int(last_id_str)
+            last_page_num = int(last_page_num_str)
+            return date, last_id, last_page_num
+        except (ValueError, TypeError):
+            return None, None, None
