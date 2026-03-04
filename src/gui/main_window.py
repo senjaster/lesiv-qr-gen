@@ -46,6 +46,9 @@ class MainWindow:
         # Generation state
         self.is_generating = False
         
+        # Register window close handler to save config
+        self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
+        
     def _load_config(self):
         """Load configuration from file."""
         pdf_path = self.config_manager.get("pdf_path", "")
@@ -394,6 +397,19 @@ class MainWindow:
         # Re-enable generate button
         self.generate_button.configure(state='normal')
         self.is_generating = False
+        
+    def _on_closing(self):
+        """Handle window close event - save config before closing."""
+        # Save current configuration
+        self.config_manager.set("pdf_path", self.template_path_var.get())
+        self.config_manager.set("csv_path", self.csv_path_var.get())
+        self.config_manager.set("output_folder", self.output_path_var.get())
+        self.config_manager.set("num_pages", self.num_pages_var.get())
+        self.config_manager.set("qr_base_url", self.qr_base_url_var.get())
+        self.config_manager.save()
+        
+        # Close the window
+        self.root.destroy()
         
     def run(self):
         """Start the main event loop."""
