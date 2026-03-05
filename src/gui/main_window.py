@@ -26,6 +26,9 @@ class MainWindow:
         self.root.geometry("700x600")
         self.root.resizable(True, True)
         
+        # Set window icon
+        self._set_window_icon()
+        
         # Initialize config manager and app
         self.config_manager = ConfigManager()
         self.app = QRCodeApp(self.config_manager)
@@ -48,6 +51,26 @@ class MainWindow:
         
         # Register window close handler to save config
         self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
+    
+    def _set_window_icon(self):
+        """Set the window icon from PNG file."""
+        try:
+            # Get the icon path relative to the project root
+            icon_path = Path(__file__).parent.parent.parent / "icon_256.png"
+            
+            if icon_path.exists():
+                # Load icon using PhotoImage
+                icon = tk.PhotoImage(file=str(icon_path))
+                self.root.iconphoto(True, icon)
+            else:
+                # Fallback: try current directory (for packaged app)
+                icon_path = Path("icon_256.png")
+                if icon_path.exists():
+                    icon = tk.PhotoImage(file=str(icon_path))
+                    self.root.iconphoto(True, icon)
+        except Exception as e:
+            # Silently fail if icon cannot be loaded
+            print(f"Warning: Could not load window icon: {e}")
         
     def _load_config(self):
         """Load configuration from file."""

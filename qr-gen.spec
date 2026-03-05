@@ -6,7 +6,9 @@ a = Analysis(
     ['src/main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[
+        ('icon_256.png', '.'),  # Include PNG icon in the bundle
+    ],
     hiddenimports=[
         'tkinter',
         'tkinter.filedialog',
@@ -50,5 +52,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=None,  # Add icon path here if you have one: 'path/to/icon.ico'
+    icon='icon.ico',  # Application icon for Windows
 )
